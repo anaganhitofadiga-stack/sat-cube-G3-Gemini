@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-PT" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Attitude Control | Engenharia de Sistemas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        space: {
+                            900: '#060B14',
+                            800: '#0B1325',
+                            700: '#131F37',
+                        },
+                        accent: {
+                            cyan: '#00F0FF',
+                            orange: '#FF9900',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-20px) rotate(2deg)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { opacity: '1', filter: 'drop-shadow(0 0 20px rgba(0, 240, 255, 0.5))' },
+                            '50%': { opacity: '.7', filter: 'drop-shadow(0 0 40px rgba(0, 240, 255, 0.8))' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos Personalizados */
+        body {
+            background-color: #060B14;
+            color: #E2E8F0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(19, 31, 55, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .text-gradient-cyan {
+            background: linear-gradient(to right, #00F0FF, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .text-gradient-orange {
+            background: linear-gradient(to right, #FF9900, #F59E0B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Fundo estrelado animado */
+        #stars-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-accent-cyan selection:text-space-900">
+
+    <!-- Fundo de Estrelas -->
+    <div id="stars-container"></div>
+
+    <!-- Navegação -->
+    <nav class="fixed w-full z-50 glass-panel transition-all duration-300 py-4" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <a href="#" class="font-display font-bold text-xl tracking-tight text-white flex items-center gap-2">
+                <i class="ph-fill ph-cube text-accent-cyan text-2xl"></i>
+                Cube<span class="text-accent-cyan">ACS</span>
+            </a>
+            <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
+                <a href="#sobre" class="hover:text-accent-cyan transition-colors">Overview</a>
+                <a href="#equipa" class="hover:text-accent-cyan transition-colors">Team</a>
+                <a href="#hardware" class="hover:text-accent-cyan transition-colors">Hardware</a>
+                <a href="#arquitetura" class="hover:text-accent-cyan transition-colors">Architecture</a>
+                <a href="#wbs-schedule" class="hover:text-accent-cyan transition-colors">WBS & Schedule</a>
+                <a href="#metodologia" class="hover:text-accent-cyan transition-colors">Methodology</a>
+            </div>
+            <button class="md:hidden text-white" id="mobile-menu-btn">
+                <i class="ph ph-list text-2xl"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Menu Mobile -->
+    <div id="mobile-menu" class="fixed inset-0 bg-space-900 z-40 hidden flex-col justify-center items-center gap-8 text-xl font-display">
+        <a href="#sobre" class="mobile-link text-white hover:text-accent-cyan">Overview</a>
+        <a href="#equipa" class="mobile-link text-white hover:text-accent-cyan">Team</a>
+        <a href="#hardware" class="mobile-link text-white hover:text-accent-cyan">Hardware</a>
+        <a href="#arquitetura" class="mobile-link text-white hover:text-accent-cyan">Architecture</a>
+        <a href="#wbs-schedule" class="mobile-link text-white hover:text-accent-cyan">WBS & Schedule</a>
+        <a href="#metodologia" class="mobile-link text-white hover:text-accent-cyan">Methodology</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20 px-6 overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-space-800 via-space-900 to-space-900 -z-10"></div>
+        
+        <div class="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+            <div class="space-y-6 z-10 text-center lg:text-left">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan text-sm font-medium mb-4">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-cyan opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-accent-cyan"></span>
+                    </span>
+                    Engenharia de Sistemas Autónomos
+                </div>
+                <h1 class="text-5xl md:text-6xl font-display font-bold leading-tight">
+                    Cube Attitude Control & <span class="text-gradient-cyan">Stabilization System</span>
+                </h1>
+                <p class="text-2xl font-light text-gray-300 border-l-4 border-accent-orange pl-4">
+                    Um cubo que aprende a apontar sozinho.
+                </p>
+                <p class="text-gray-400 max-w-lg mx-auto lg:mx-0">
+                    Estabilização autónoma via Rodas de Reação e Visão Computacional. Do simulador ao hardware.
+                </p>
+                <div class="pt-4">
+                    <a href="#sobre" class="inline-flex items-center gap-2 bg-accent-cyan text-space-900 font-semibold px-8 py-3 rounded-lg hover:bg-white transition-all shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+                        Explorar o Projeto <i class="ph ph-arrow-down-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Gráfico / Ilustração do Cubo 3D simulado em CSS/SVG -->
+            <div class="relative w-full h-[400px] flex justify-center items-center animate-float">
+                <!-- Brilho de fundo -->
+                <div class="absolute w-64 h-64 bg-accent-cyan/20 rounded-full blur-[100px]"></div>
+                <div class="absolute w-48 h-48 bg-accent-orange/20 rounded-full blur-[80px] -translate-x-12 translate-y-12"></div>
+                
+                <!-- Ilustração do Cubo (SVG Hitech) -->
+                <svg width="280" height="280" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="z-10 animate-pulse-glow">
+                    <!-- Estrutura do cubo -->
+                    <path d="M100 20 L170 60 L170 140 L100 180 L30 140 L30 60 Z" stroke="#00F0FF" stroke-width="2" fill="rgba(19,31,55,0.8)" stroke-linejoin="round"/>
+                    <path d="M100 20 L100 100 L170 60" stroke="#00F0FF" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M100 100 L30 60" stroke="#00F0FF" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M100 100 L100 180" stroke="#00F0FF" stroke-width="2" stroke-linejoin="round"/>
+                    
+                    <!-- Roda de Reação Interior -->
+                    <ellipse cx="135" cy="100" rx="25" ry="15" transform="rotate(-30 135 100)" stroke="#FF9900" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
+                    <circle cx="135" cy="100" r="4" fill="#FF9900" />
+                    
+                    <!-- Linha de Visão (Câmara) -->
+                    <line x1="65" y1="80" x2="10" y2="30" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="3 3"/>
+                    <circle cx="10" cy="30" r="5" stroke="#00F0FF" stroke-width="1.5" fill="none"/>
+                    
+                    <!-- Pontos nodais -->
+                    <circle cx="100" cy="20" r="3" fill="#FFF"/>
+                    <circle cx="170" cy="60" r="3" fill="#FFF"/>
+                    <circle cx="170" cy="140" r="3" fill="#FFF"/>
+                    <circle cx="100" cy="180" r="3" fill="#FFF"/>
+                    <circle cx="30" cy="140" r="3" fill="#FFF"/>
+                    <circle cx="30" cy="60" r="3" fill="#FFF"/>
+                    <circle cx="100" cy="100" r="4" fill="#00F0FF"/>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção Sobre o Projeto -->
+    <section id="sobre" class="py-24 px-6 relative bg-space-800 border-t border-white/5">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">Sobre o <span class="text-gradient-cyan">Projeto</span></h2>
+                <div class="w-24 h-1 bg-accent-orange mx-auto rounded-full"></div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6 reveal">
+                    <p class="text-lg text-gray-300 leading-relaxed">
+                        Como é que um satélite aponta no espaço, sem ter nada contra o que se apoiar? A resposta está na física: conservação do momento angular. 
+                    </p>
+                    <p class="text-lg text-gray-300 leading-relaxed">
+                        Este projeto recria, num ambiente académico, o exato princípio utilizado por telescópios espaciais como o Hubble e pequenos CubeSats. Utilizando <strong class="text-white">rodas de reação</strong>, o sistema roda um disco no seu interior e o corpo do cubo roda no sentido oposto.
+                    </p>
+                    <div class="glass-panel p-6 rounded-xl border-l-4 border-accent-cyan mt-6">
+                        <h3 class="font-display font-semibold text-xl text-white mb-2 flex items-center gap-2">
+                            <i class="ph-fill ph-eye text-accent-cyan"></i> Visão Computacional
+                        </h3>
+                        <p class="text-sm text-gray-400">
+                            Sem intervenção humana (zero comandos manuais), o cubo utiliza uma câmara a bordo para identificar um alvo visual (um ponto negro num cartaz), calculando o erro e atuando nos motores em tempo real para se centrar autonomamente.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 reveal delay-100">
+                    <div class="glass-panel p-6 rounded-xl hover:bg-space-700 transition-colors">
+                        <i class="ph ph-arrows-out-line text-4xl text-accent-cyan mb-4 block"></i>
+                        <h4 class="text-white font-semibold mb-2">Sem Propulsores</h4>
+                        <p class="text-sm text-gray-400">Todo o movimento é gerado internamente através da aceleração de massas (flywheels).</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:bg-space-700 transition-colors">
+                        <i class="ph ph-cpu text-4xl text-accent-cyan mb-4 block"></i>
+                        <h4 class="text-white font-semibold mb-2">Processamento a Bordo</h4>
+                        <p class="text-sm text-gray-400">Todo o algoritmo de deteção e malha de controlo corre nativamente num microcontrolador Dual-Core.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:bg-space-700 transition-colors">
+                        <i class="ph ph-wifi-high text-4xl text-accent-cyan mb-4 block"></i>
+                        <h4 class="text-white font-semibold mb-2">Telemetria (TMTC)</h4>
+                        <p class="text-sm text-gray-400">Comunicação UDP para a Estação de Terra (Ground Station) em Python para gráficos em tempo real.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl hover:bg-space-700 transition-colors">
+                        <i class="ph ph-rocket text-4xl text-accent-orange mb-4 block"></i>
+                        <h4 class="text-white font-semibold mb-2">Precisão Espacial</h4>
+                        <p class="text-sm text-gray-400">Capacidade de recuperar de perturbações e manter a posição (erro máximo de ±2°).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção A Equipa -->
+    <section id="equipa" class="py-24 px-6 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">A <span class="text-gradient-orange">Equipa</span></h2>
+                <div class="w-24 h-1 bg-accent-cyan mx-auto rounded-full"></div>
+                <p class="text-gray-400 mt-4 max-w-2xl mx-auto">Perfis multidisciplinares a unir o controlo dinâmico à integração de sistemas embebidos.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 reveal">
+                <!-- Membro 1 -->
+                <div class="glass-panel rounded-2xl p-6 text-center group hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-space-700 to-space-800 rounded-full flex items-center justify-center border border-accent-cyan/30 mb-4 group-hover:border-accent-cyan transition-colors">
+                        <i class="ph ph-planet text-3xl text-accent-cyan"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg">Ana</h3>
+                    <p class="text-accent-cyan text-xs font-medium uppercase tracking-wider mb-2">Aeroespacial</p>
+                    <p class="text-gray-400 text-xs mt-3">Simulação de atitude e controlo (amortecimento Roll/Pitch).</p>
+                </div>
+                <!-- Membro 2 -->
+                <div class="glass-panel rounded-2xl p-6 text-center group hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-space-700 to-space-800 rounded-full flex items-center justify-center border border-accent-cyan/30 mb-4 group-hover:border-accent-cyan transition-colors">
+                        <i class="ph ph-rocket text-3xl text-accent-cyan"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg">Maurício</h3>
+                    <p class="text-accent-cyan text-xs font-medium uppercase tracking-wider mb-2">Aeroespacial</p>
+                    <p class="text-gray-400 text-xs mt-3">Dinâmica do sistema, controlo Yaw e arquitetura de modelos em cascata.</p>
+                </div>
+                <!-- Membro 3 -->
+                <div class="glass-panel rounded-2xl p-6 text-center group hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-space-700 to-space-800 rounded-full flex items-center justify-center border border-accent-cyan/30 mb-4 group-hover:border-accent-cyan transition-colors">
+                        <i class="ph ph-satellite text-3xl text-accent-cyan"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg">Ricardo</h3>
+                    <p class="text-accent-cyan text-xs font-medium uppercase tracking-wider mb-2">Aeroespacial</p>
+                    <p class="text-gray-400 text-xs mt-3">Protocolos de comunicação TMTC e Interface Control Document (ICD).</p>
+                </div>
+                <!-- Membro 4 -->
+                <div class="glass-panel rounded-2xl p-6 text-center group hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-space-700 to-space-800 rounded-full flex items-center justify-center border border-accent-orange/30 mb-4 group-hover:border-accent-orange transition-colors">
+                        <i class="ph ph-lightning text-3xl text-accent-orange"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg">Edson</h3>
+                    <p class="text-accent-orange text-xs font-medium uppercase tracking-wider mb-2">Eletrotécnica</p>
+                    <p class="text-gray-400 text-xs mt-3">Firmware, Hardware (FreeRTOS, I2C, CAN-FD) e Device Drivers.</p>
+                </div>
+                <!-- Membro 5 -->
+                <div class="glass-panel rounded-2xl p-6 text-center group hover:-translate-y-2 transition-transform duration-300 lg:col-span-1 md:col-span-2">
+                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-space-700 to-space-800 rounded-full flex items-center justify-center border border-accent-orange/30 mb-4 group-hover:border-accent-orange transition-colors">
+                        <i class="ph ph-robot text-3xl text-accent-orange"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg">Alessia</h3>
+                    <p class="text-accent-orange text-xs font-medium uppercase tracking-wider mb-2">Automação Ind.</p>
+                    <p class="text-gray-400 text-xs mt-3">Ground Station (Python, GUI) e visualização de telemetria.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção Hardware -->
+    <section id="hardware" class="py-24 px-6 bg-space-800 border-t border-b border-white/5">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 reveal">
+                <div>
+                    <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">A Arquitetura de <span class="text-gradient-cyan">Hardware</span></h2>
+                    <div class="w-24 h-1 bg-accent-cyan rounded-full mb-4"></div>
+                    <p class="text-gray-400 max-w-xl">Um ecossistema rígido de componentes time-sensitive, onde o sistema operativo de tempo real (FreeRTOS) garante a estabilidade crítica.</p>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 reveal">
+                <!-- SoC -->
+                <div class="glass-panel p-6 rounded-xl border border-white/10 hover:border-accent-cyan/50 transition-all relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="ph-fill ph-cpu text-6xl text-accent-cyan"></i>
+                    </div>
+                    <i class="ph ph-microchip text-3xl text-white mb-4"></i>
+                    <h3 class="font-display font-bold text-lg text-white mb-1">ESP32-S3 SoC</h3>
+                    <p class="text-accent-cyan text-xs font-bold mb-3">O CÉREBRO DUAL-CORE</p>
+                    <p class="text-gray-400 text-sm">Corre o <strong>FreeRTOS</strong>. Core 1 exclusivamente dedicado ao controlo do motor (estabilidade). Core 2 dedicado à câmara e Wi-Fi TMTC.</p>
+                </div>
+
+                <!-- Atuadores -->
+                <div class="glass-panel p-6 rounded-xl border border-white/10 hover:border-accent-orange/50 transition-all relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="ph-fill ph-engine text-6xl text-accent-orange"></i>
+                    </div>
+                    <i class="ph ph-fan text-3xl text-white mb-4"></i>
+                    <h3 class="font-display font-bold text-lg text-white mb-1">Motores & Drivers</h3>
+                    <p class="text-accent-orange text-xs font-bold mb-3">CAN-FD VIA SPI</p>
+                    <p class="text-gray-400 text-sm">Motores Brushless acoplados às rodas de reação. Comunicam com a board principal via conversores de protocolo para o robusto barramento <strong>CAN-FD</strong>.</p>
+                </div>
+
+                <!-- Navegação -->
+                <div class="glass-panel p-6 rounded-xl border border-white/10 hover:border-accent-cyan/50 transition-all relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="ph-fill ph-compass text-6xl text-accent-cyan"></i>
+                    </div>
+                    <i class="ph ph-crosshair text-3xl text-white mb-4"></i>
+                    <h3 class="font-display font-bold text-lg text-white mb-1">Sensor Inercial</h3>
+                    <p class="text-accent-cyan text-xs font-bold mb-3">IMU & MAGNETÓMETRO (I2C)</p>
+                    <p class="text-gray-400 text-sm">Provê os dados imediatos de movimento, aceleração e gravidade. Essencial para colmatar os "gaps" cegos entre as frames da câmara.</p>
+                </div>
+
+                <!-- Visão -->
+                <div class="glass-panel p-6 rounded-xl border border-white/10 hover:border-accent-orange/50 transition-all relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="ph-fill ph-camera text-6xl text-accent-orange"></i>
+                    </div>
+                    <i class="ph ph-camera text-3xl text-white mb-4"></i>
+                    <h3 class="font-display font-bold text-lg text-white mb-1">Câmara OV5640</h3>
+                    <p class="text-accent-orange text-xs font-bold mb-3">A LIGAÇÃO SPI</p>
+                    <p class="text-gray-400 text-sm">O "olho" do satélite. Adquire imagens em baixa resolução (tons de cinza) para não sobrecarregar a CPU, focando na deteção de pontos alvo a ~20 fps.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção Arquitetura (NOVA) -->
+    <section id="arquitetura" class="py-24 px-6 relative bg-space-900 border-t border-white/5">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">Software Architecture & <span class="text-gradient-cyan">Protocols</span></h2>
+                <div class="w-24 h-1 bg-accent-cyan mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-400 max-w-2xl mx-auto">Estratégia Multicore no FreeRTOS e interfaces de comunicação rigorosas.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-12">
+                <!-- Multicore Processing -->
+                <div class="space-y-6 reveal">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="ph-fill ph-cpu text-accent-cyan"></i> Multicore Processing
+                    </h3>
+                    <div class="glass-panel p-6 rounded-xl border-l-4 border-accent-cyan hover:bg-space-800 transition-colors">
+                        <h4 class="text-lg font-bold text-white mb-2">Core 1: Critical Control</h4>
+                        <p class="text-gray-400 text-sm">Dedicado exclusivamente à estabilização mecânica. Lê constantemente o IMU, verifica setpoints e ajusta motores. <strong class="text-white">A regra de ouro:</strong> o cubo deve manter a posição mesmo que a ligação Wi-Fi falhe.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl border-l-4 border-accent-orange hover:bg-space-800 transition-colors">
+                        <h4 class="text-lg font-bold text-white mb-2">Core 2: Acquisition & TMTC</h4>
+                        <p class="text-gray-400 text-sm">Gere a aquisição de imagem e processamento onboard (procura do alvo visual) e telemetria (TMTC) para não esgotar ou causar latência no ciclo de estabilidade do Core 1.</p>
+                    </div>
+                </div>
+
+                <!-- Protocolos -->
+                <div class="space-y-6 reveal delay-100">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="ph-fill ph-plugs text-accent-orange"></i> Communication Protocols
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="glass-panel p-5 rounded-xl hover:border-accent-cyan/50 transition-colors border border-transparent">
+                            <h4 class="text-accent-cyan font-bold mb-1">I2C (Synchronous)</h4>
+                            <p class="text-xs text-gray-400">Comunicação interna fundamental com os sensores de navegação (IMU e Magnetómetro).</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-xl hover:border-accent-cyan/50 transition-colors border border-transparent">
+                            <h4 class="text-accent-cyan font-bold mb-1">SPI (High-Speed)</h4>
+                            <p class="text-xs text-gray-400">Ligação síncrona dedicada à câmara OV5640 e Transceivers, garantindo velocidade no processamento da matriz.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-xl hover:border-accent-orange/50 transition-colors border border-transparent">
+                            <h4 class="text-accent-orange font-bold mb-1">CAN-FD</h4>
+                            <p class="text-xs text-gray-400">Os motores comunicam através do potente barramento CAN-FD, utilizando um chip conversor <em>SPI to CAN-FD</em>.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-xl hover:border-accent-orange/50 transition-colors border border-transparent">
+                            <h4 class="text-accent-orange font-bold mb-1">TMTC (Wi-Fi/UDP)</h4>
+                            <p class="text-xs text-gray-400">Interface UDP com a Ground Station para telemetria em tempo real, pacotes com validação CRC e eventuais pings BLE.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção WBS & Schedule -->
+    <section id="wbs-schedule" class="py-24 px-6 bg-space-800 border-t border-b border-white/5 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">Work Breakdown Structure & <span class="text-gradient-orange">Schedule</span></h2>
+                <div class="w-24 h-1 bg-accent-orange mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-400 max-w-2xl mx-auto">Cronograma estratégico estruturado para conclusão do desenvolvimento antes de dia 30 de Novembro.</p>
+            </div>
+
+            <!-- Gantt Chart Visual -->
+            <div class="glass-panel p-6 md:p-8 rounded-2xl mb-12 reveal shadow-lg shadow-black/50">
+                <h3 class="text-white font-display font-bold mb-8 text-xl flex items-center gap-2">
+                    <i class="ph-fill ph-calendar-blank text-accent-cyan"></i> Project Schedule (Gantt Chart)
+                </h3>
+                <div class="relative w-full space-y-5">
+                    <!-- Timeline Header -->
+                    <div class="flex text-xs md:text-sm font-bold text-gray-500 uppercase border-b border-white/10 pb-3">
+                        <div class="w-1/3 text-left">October (W1 - W3)</div>
+                        <div class="w-1/3 text-center">November (W4 - W7)</div>
+                        <div class="w-1/3 text-right">December (W8 - W9)</div>
+                    </div>
+                    
+                    <!-- Gantt Bars -->
+                    <div class="relative h-12 bg-space-900/60 rounded-xl overflow-hidden group">
+                        <div class="absolute left-0 top-0 bottom-0 w-[33%] bg-gradient-to-r from-accent-cyan/80 to-blue-500/80 group-hover:from-accent-cyan group-hover:to-blue-500 transition-all flex items-center px-4 rounded-xl cursor-pointer">
+                            <span class="text-white font-bold text-xs md:text-sm whitespace-nowrap">WBS 1.0 & 2.0 (Startup / GS)</span>
+                        </div>
+                    </div>
+                    <div class="relative h-12 bg-space-900/60 rounded-xl overflow-hidden group">
+                        <div class="absolute left-[25%] top-0 bottom-0 w-[45%] bg-gradient-to-r from-blue-500/80 to-purple-500/80 group-hover:from-blue-500 group-hover:to-purple-500 transition-all flex items-center px-4 rounded-xl shadow-lg cursor-pointer">
+                            <span class="text-white font-bold text-xs md:text-sm whitespace-nowrap">WBS 3.0: Basic Control (Levels 1-3)</span>
+                        </div>
+                    </div>
+                    <div class="relative h-12 bg-space-900/60 rounded-xl overflow-hidden group">
+                        <div class="absolute left-[55%] top-0 bottom-0 w-[30%] bg-gradient-to-r from-purple-500/80 to-accent-orange/80 group-hover:from-purple-500 group-hover:to-accent-orange transition-all flex items-center px-4 rounded-xl shadow-lg cursor-pointer">
+                            <span class="text-white font-bold text-xs md:text-sm whitespace-nowrap">WBS 4.0: Vision & Tracking (Levels 4-6)</span>
+                        </div>
+                    </div>
+                    <div class="relative h-12 bg-space-900/60 rounded-xl overflow-hidden group">
+                        <div class="absolute right-0 top-0 bottom-0 w-[15%] bg-gradient-to-r from-accent-orange/80 to-emerald-500/80 group-hover:from-accent-orange group-hover:to-emerald-500 transition-all flex items-center px-4 rounded-xl cursor-pointer">
+                            <span class="text-space-900 font-bold text-xs md:text-sm whitespace-nowrap">WBS 5.0: Buffer Zone</span>
+                        </div>
+                        <!-- Deadline Marker -->
+                        <div class="absolute right-[15%] top-0 bottom-0 w-1 bg-red-500 z-10 hidden md:block"></div>
+                        <span class="absolute right-[16%] -top-1 text-[10px] font-bold text-red-500 hidden md:block">INTERNAL DEADLINE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WBS Detailed Table -->
+            <div class="overflow-x-auto reveal delay-100 rounded-xl border border-white/10 glass-panel">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="text-xs text-white uppercase bg-white/5 border-b border-white/10">
+                        <tr>
+                            <th class="px-6 py-5 rounded-tl-xl">WBS Code</th>
+                            <th class="px-6 py-5">Work Package</th>
+                            <th class="px-6 py-5 min-w-[300px]">Technical Task & Deliverable</th>
+                            <th class="px-6 py-5 rounded-tr-xl">Milestone</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-6 py-5 font-bold text-accent-cyan">1.0 & 2.0</td>
+                            <td class="px-6 py-5 font-medium text-white">Management, Startup & Ground Station</td>
+                            <td class="px-6 py-5">Toolchain setup (MSYS2, ESP-IDF, Python). Redação do TMTC ICD. Criação do TMTC Emulator e GUI (PyQt5) para visualização de dados IMU. Envio inicial de <em>Dummy Data</em>.</td>
+                            <td class="px-6 py-5"><span class="bg-accent-cyan/20 text-accent-cyan py-1 px-3 rounded-full text-xs font-bold border border-accent-cyan/30">Checkpoint 1 (L0-L2)</span></td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-6 py-5 font-bold text-blue-400">3.0</td>
+                            <td class="px-6 py-5 font-medium text-white">Basic Control, Stabilization & Attitude</td>
+                            <td class="px-6 py-5">Implementação de drivers CAN-FD. Filtros de ruído para IMU (erro < 2°). Closed-loop autónomo no eixo Yaw e teste dinâmico (Step response 45°, settling < ±1°).</td>
+                            <td class="px-6 py-5"><span class="bg-blue-500/20 text-blue-400 py-1 px-3 rounded-full text-xs font-bold border border-blue-500/30">Checkpoint 2 (L1-L3)</span></td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-6 py-5 font-bold text-purple-400">4.0</td>
+                            <td class="px-6 py-5 font-medium text-white">Computer Vision & Tracking</td>
+                            <td class="px-6 py-5">Conexão da câmara SPI. Algoritmo onboard para deteção de alvo (≥15 fps). Conexão do erro visual com os motores. Testes físicos reais completos (Oclusão e movimento).</td>
+                            <td class="px-6 py-5"><span class="bg-purple-500/20 text-purple-400 py-1 px-3 rounded-full text-xs font-bold border border-purple-500/30">Internal Deadline (L4-L6)</span></td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-6 py-5 font-bold text-emerald-400">5.0</td>
+                            <td class="px-6 py-5 font-medium text-white">Buffer Zone & Delivery</td>
+                            <td class="px-6 py-5">Code Freeze, consolidação GIT, limpeza do firmware. Revisão geral de relatórios e documentação técnica. Preparação de defesa.</td>
+                            <td class="px-6 py-5"><span class="bg-emerald-500/20 text-emerald-400 py-1 px-3 rounded-full text-xs font-bold border border-emerald-500/30">Official Submission</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secção Metodologia (V-Model) -->
+    <section id="metodologia" class="py-24 px-6 bg-space-900 border-t border-white/5 relative overflow-hidden">
+        <!-- Decor element background -->
+        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent-cyan/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto reveal relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">V-Model <span class="text-gradient-cyan">Development Methodology</span></h2>
+                <div class="w-24 h-1 bg-accent-cyan mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-400 max-w-2xl mx-auto">Acoplamento direto entre as abstrações arquitetónicas (Braço Esquerdo) e as respetivas validações físicas e virtuais (Braço Direito), crucial no firmware aeroespacial.</p>
+            </div>
+
+            <div class="relative max-w-6xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-between gap-8 mb-12">
+                    
+                    <!-- Braço Esquerdo (Verificação - Design) -->
+                    <div class="flex-1 space-y-6 flex flex-col pt-4">
+                        <div class="glass-panel p-5 rounded-lg border-l-4 border-accent-cyan hover:border-l-8 ml-0 bg-gradient-to-r from-accent-cyan/10 to-transparent transition-all duration-300">
+                            <h4 class="font-bold text-white text-lg mb-1">Level 1: Requirement Gathering</h4>
+                            <p class="text-sm text-gray-400">Definição imperativa do microcontrolador (ESP32 dual-core), restrições de massa/energia e rejeição definitiva do protocolo UART por restrições críticas de latência.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-l-4 border-accent-cyan hover:border-l-8 ml-6 md:ml-12 transition-all duration-300">
+                            <h4 class="font-bold text-white text-lg mb-1">Level 2: System Analysis</h4>
+                            <p class="text-sm text-gray-400">Divisão arquitetónica: Cubo Físico vs PC Ground Station (UDP/BLE). Estabelecimento da topologia I2C (IMU) e introdução do conversor físico SPI to CAN-FD.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-l-4 border-accent-cyan hover:border-l-8 ml-12 md:ml-24 transition-all duration-300">
+                            <h4 class="font-bold text-white text-lg mb-1">Level 3: Software Design</h4>
+                            <p class="text-sm text-gray-400">Abandono da abordagem baremetal. Alocação rigorosa multicore via FreeRTOS e redação da primeira versão do ICD (pacotes, CRC e comandos de telemetria).</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-l-4 border-accent-cyan hover:border-l-8 ml-18 md:ml-[144px] transition-all duration-300">
+                            <h4 class="font-bold text-white text-lg mb-1">Level 4: Module Design</h4>
+                            <p class="text-sm text-gray-400">Micro-planeamento do Controlo em Cascata (Visão → Velocidade Angular → Motores), filtragem de ruído I2C e mockup da GUI em Python PyQt5.</p>
+                        </div>
+                    </div>
+
+                    <!-- Vértice (Coding Phase) -->
+                    <div class="flex-shrink-0 flex items-center justify-center py-12 md:py-0 w-full md:w-64 self-center md:translate-y-24 z-10">
+                        <div class="glass-panel p-8 rounded-3xl border-b-4 border-accent-orange text-center transform hover:scale-105 transition-all shadow-[0_10px_30px_rgba(255,153,0,0.15)] bg-gradient-to-t from-accent-orange/20 to-transparent w-full">
+                            <i class="ph-fill ph-code text-5xl text-accent-orange mb-4 shadow-accent-orange"></i>
+                            <h4 class="font-bold text-white text-xl">Base Coding</h4>
+                            <p class="text-sm text-gray-400 mt-2">Tradução massiva para C/C++ (ESP-IDF) via MSYS2. Utilização exaustiva de <strong class="text-white">Simulador Local</strong> e pacotes de <em>Dummy Data</em> antes de tocar no hardware sensível.</p>
+                        </div>
+                    </div>
+
+                    <!-- Braço Direito (Validação - Testing) -->
+                    <div class="flex-1 space-y-6 flex flex-col justify-end mt-8 md:mt-0 pb-4">
+                        <div class="glass-panel p-5 rounded-lg border-r-4 border-emerald-400 hover:border-r-8 mr-18 md:mr-[144px] transition-all duration-300 text-right">
+                            <h4 class="font-bold text-white text-lg mb-1">Unit Testing (SIL/PIL)</h4>
+                            <p class="text-sm text-gray-400">Teste isolado de módulos lógicos (Software-in-the-loop). Exposição dos algoritmos do filtro IMU (acumulação < 2°) e scan de matriz branca sobre fundo negro.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-r-4 border-emerald-400 hover:border-r-8 mr-12 md:mr-24 transition-all duration-300 text-right">
+                            <h4 class="font-bold text-white text-lg mb-1">Integration Testing (HIL)</h4>
+                            <p class="text-sm text-gray-400">Hardware-in-the-loop. Prova-se que o envio pesado de telemetria UDP (Core 2) não causa latências que colapsem a estabilidade crítica (Core 1) na breadboard.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-r-4 border-emerald-400 hover:border-r-8 mr-6 md:mr-12 transition-all duration-300 text-right">
+                            <h4 class="font-bold text-white text-lg mb-1">System Testing</h4>
+                            <p class="text-sm text-gray-400">Cubo completamente montado no chassis. Testes robustos: step de 45° (erro final ≤±1°) e isolamento completo para comprovar resiliência à quebra de Wi-Fi.</p>
+                        </div>
+                        <div class="glass-panel p-5 rounded-lg border-r-4 border-emerald-400 hover:border-r-8 mr-0 bg-gradient-to-l from-emerald-500/10 to-transparent transition-all duration-300 text-right">
+                            <h4 class="font-bold text-white text-lg mb-1">Acceptance Testing</h4>
+                            <p class="text-sm text-gray-400">Avaliação suprema da missão (Level 6): 5 provas sem falhas físicas. (Aquisição < 6s, Fixação (Hold), Perturbação mecânica, Tracking dinâmico e Oclusão da Câmara).</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-space-900 border-t border-white/10 py-12 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-cube text-accent-cyan text-3xl"></i>
+                <div>
+                    <span class="font-display font-bold text-xl text-white block leading-none">Cube<span class="text-accent-cyan">ACS</span></span>
+                    <span class="text-xs text-gray-500">Mestrado em Eng. Aeroespacial / Eletrotécnica</span>
+                </div>
+            </div>
+            
+            <p class="text-gray-500 text-sm text-center md:text-right">
+                © 2026/27 Projeto de Sistemas Embebidos e Controlo. <br>
+                Criado para documentação de arquitetura técnica e WBS.
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript para Interatividade e Animações -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Gerar Fundo de estrelas
+            const starsContainer = document.getElementById('stars-container');
+            const numStars = 100;
+            for (let i = 0; i < numStars; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                // Posições aleatórias
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                // Tamanhos aleatórios (0.5px a 2.5px)
+                const size = Math.random() * 2 + 0.5;
+                // Duração da animação aleatória (3s a 8s)
+                const duration = Math.random() * 5 + 3;
+                
+                star.style.left = `${x}%`;
+                star.style.top = `${y}%`;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.animationDuration = `${duration}s`;
+                star.style.animationDelay = `${Math.random() * 5}s`;
+                
+                starsContainer.appendChild(star);
+            }
+
+            // Navbar background mudança ao fazer scroll
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('bg-space-900/90', 'shadow-lg');
+                    navbar.classList.remove('glass-panel');
+                } else {
+                    navbar.classList.add('glass-panel');
+                    navbar.classList.remove('bg-space-900/90', 'shadow-lg');
+                }
+            });
+
+            // Mobile menu toggle
+            const mobileBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileLinks = document.querySelectorAll('.mobile-link');
+
+            mobileBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                mobileMenu.classList.toggle('flex');
+            });
+
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenu.classList.remove('flex');
+                });
+            });
+
+            // Intersection Observer para as animações de Scroll (reveal)
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal').forEach((el) => {
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>
