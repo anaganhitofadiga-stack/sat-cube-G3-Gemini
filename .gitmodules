@@ -1,0 +1,3 @@
+[submodule "ground_station"]
+	path = ground_station
+	url = https://github.com/aledarm/Cube_Sat_Ground_Station.git
