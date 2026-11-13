@@ -1,0 +1,29 @@
+# Configuracao para o Seeed Studio XIAO ESP32-S3 Sense.
+# Apagar sdkconfig (nao este ficheiro) se for preciso voltar a estes valores.
+
+CONFIG_IDF_TARGET="esp32s3"
+
+# O XIAO nao tem chip USB-serie: a consola vai pelo USB nativo (USB Serial JTAG).
+# Sem isto nao se ve nada no monitor nem chegam telecomandos.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# Flash de 8 MB (modelo do XIAO ESP32-S3).
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
+
+# Tique de 1 ms: os pdMS_TO_TICKS da tarefa de controlo ficam com a resolucao
+# certa (com os 100 Hz por omissao, um timeout de 5 ms arredonda para 10 ms).
+CONFIG_FREERTOS_HZ=1000
+
+# 240 MHz: a tarefa de 200 Hz tem de caber com folga em 5 ms.
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=240
+
+# Otimizar para velocidade (o controlo corre em virgula flutuante).
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# PSRAM: so e preciso para a camara. Ligar na fase da OV5640 com
+#   CONFIG_SPIRAM=y
+#   CONFIG_SPIRAM_MODE_OCT=y
+# (o XIAO ESP32-S3 tem 8 MB de PSRAM em octal SPI).
